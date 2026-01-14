@@ -83,18 +83,15 @@
     </section>
 
     <!-- 4. Module: QR Scanner (Lookup) -->
-    <section id="scanner-module" class="screen hidden">
-        <div class="card">
-            <button class="btn-outline" onclick="showModule('dashboard')">← Back</button>
-            <h2 style="margin-top:15px">Product Lookup</h2>
-            <p>Scan a QR code to see details</p>
-            <button class="btn-primary" onclick="startLookupScan()" style="margin:15px 0">📷 Start Camera</button>
-            <div id="reader-lookup" style="width:100%"></div>
-            <div id="lookup-result" class="hidden" style="margin-top:20px; padding:15px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0">
-                <!-- Data from JS -->
-            </div>
-        </div>
-    </section>
+   <section id="scanner-module" class="screen hidden">
+    <div class="card">
+        <button class="btn-outline" onclick="showModule('dashboard')">← Back</button>
+        <h2 style="margin-top:15px">Product Lookup</h2>
+        <button class="btn-primary" onclick="startLookupScan()" style="margin:15px 0">📷 Start Camera</button>
+        <div id="reader-lookup"></div> <!-- MUST BE THIS ID -->
+        <div id="lookup-result" class="hidden" style="margin-top:20px; padding:15px; background:#f0f7ff; border-radius:10px"></div>
+    </div>
+</section>
 
     <!-- 5. Module: Billing System -->
     <section id="billing-module" class="screen hidden">
