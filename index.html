@@ -6,29 +6,31 @@
     <meta name="theme-color" content="#4f46e5">
     <title>R-C-S-P Smart QR</title>
     
-    <!-- Link to manifest for PWA installation -->
+    <!-- PWA & UI Links -->
     <link rel="manifest" href="manifest.json">
-    <!-- Link to your CSS -->
     <link rel="stylesheet" href="styles.css">
-    <!-- Prevent favicon 404 error -->
     <link rel="icon" href="data:,">
-    
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
     
-    <!-- External Libraries (CDNs) -->
+    <!-- External Libraries -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+
+    <style>
+        #initial-loader { position: fixed; inset: 0; background: #4f46e5; color: white; display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 10000; font-family: sans-serif; }
+        .spinner { width: 40px; height: 40px; border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid #fff; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 15px; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
 
     <!-- Splash Loader -->
-    <div id="initial-loader"><b>R-C-S-P</b></div>
+    <div id="initial-loader">
+        <div class="spinner"></div>
+        <b>R-C-S-P SMART QR</b>
+    </div>
 
-    <!-- Offline Notification -->
-    <div id="offline-indicator" class="hidden">⚠️ Offline Mode Active</div>
-
-    <!-- Main Header -->
+    <!-- App Header -->
     <header id="main-header" class="hidden">
         <div class="header-container">
             <div class="logo">R-C-S-P <span>POS</span></div>
@@ -36,160 +38,118 @@
         </div>
     </header>
 
-    <!-- 1. LOGIN SCREEN -->
-    <div id="login-screen" class="screen active">
-        <div class="auth-wrap">
-            <div class="glass-card auth-card">
-                <h1>Admin Login</h1>
-                <p>Enter credentials to access dashboard</p>
+    <!-- LOGIN SCREEN -->
+    <div id="login-screen" class="screen">
+        <div class="container" style="display:flex; align-items:center; justify-content:center; min-height:85vh;">
+            <div class="glass-card" style="width:100%; max-width:400px; text-align:center;">
+                <h1 style="color:var(--primary); margin-bottom:10px;">Admin Login</h1>
                 <form id="login-form">
-                    <input type="email" id="login-email" placeholder="Email" required>
+                    <input type="email" id="login-email" placeholder="Email Address" required>
                     <input type="password" id="login-pw" placeholder="Password" required>
-                    <button type="submit" class="btn-primary">Sign In</button>
+                    <button type="submit" class="btn-primary">Sign In to POS</button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- 2. DASHBOARD -->
-    <main id="dashboard" class="screen hidden">
+    <!-- DASHBOARD -->
+    <main id="dashboard" class="screen">
         <div class="container">
-            <h2 class="section-title">Store Control</h2>
+            <h2 class="section-title">Dashboard</h2>
             <div class="dashboard-grid">
-                <div class="tile" onclick="window.showModule('generator-module')">
-                    <span class="icon">➕</span>
-                    <h3>Add Item</h3>
-                </div>
-                <div class="tile" onclick="window.showModule('billing-module')">
-                    <span class="icon">🧾</span>
-                    <h3>New Bill</h3>
-                </div>
-                <div class="tile" onclick="window.showModule('scanner-module')">
-                    <span class="icon">🔍</span>
-                    <h3>Price Check</h3>
-                </div>
-                <div class="tile" onclick="window.showModule('inventory-module')">
-                    <span class="icon">📦</span>
-                    <h3>Inventory</h3>
-                </div>
+                <div class="tile" onclick="window.showModule('generator-module')"><span class="icon">🏷️</span><h3>Add Item</h3></div>
+                <div class="tile" onclick="window.showModule('billing-module')"><span class="icon">🧾</span><h3>New Bill</h3></div>
+                <div class="tile" onclick="window.showModule('scanner-module')"><span class="icon">🔍</span><h3>Price Check</h3></div>
+                <div class="tile" onclick="window.showModule('inventory-module')"><span class="icon">📦</span><h3>Inventory</h3></div>
             </div>
         </div>
     </main>
 
-    <!-- 3. INVENTORY MODULE (Manage Existing Products) -->
-    <section id="inventory-module" class="screen hidden">
+    <!-- INVENTORY -->
+    <section id="inventory-module" class="screen">
         <div class="container">
             <button onclick="window.showModule('dashboard')" class="btn-back">← Dashboard</button>
-            <h2 class="section-title">Stock Management</h2>
             <div class="search-box">
-                <input type="text" id="inventory-search" placeholder="Search products by name..." oninput="window.filterInventory()">
+                <input type="text" id="inventory-search" placeholder="Search product..." oninput="window.filterInventory()">
             </div>
-            <div id="inventory-list" class="list-container glass-card" style="padding: 10px;">
-                <!-- Product rows populated by app.js -->
-            </div>
+            <div id="inventory-list" class="glass-card list-container"></div>
         </div>
     </section>
 
-    <!-- 4. PRICE CHECK MODULE (Search + Scan + Hidden Margins) -->
-    <section id="scanner-module" class="screen hidden">
+    <!-- PRICE CHECK -->
+    <section id="scanner-module" class="screen">
         <div class="container">
             <button onclick="window.showModule('dashboard')" class="btn-back">← Dashboard</button>
-            <h2 class="section-title">Check Price</h2>
-            
-            <!-- Search by Title -->
             <div class="search-box">
-                <input type="text" id="lookup-search" placeholder="Type product name to search..." oninput="window.searchTextLookup()">
+                <input type="text" id="lookup-search" placeholder="Search by product title..." oninput="window.searchTextLookup()">
             </div>
             <div id="lookup-search-results" class="dropdown-list hidden"></div>
             
             <div class="divider"><span>OR SCAN QR</span></div>
-            
-            <!-- Scan by QR -->
-            <button class="btn-primary" onclick="window.startLookupScan()">📷 Open Scanner</button>
+            <button class="btn-primary" onclick="window.startLookupScan()">📷 Start QR Scanner</button>
             <div id="reader-lookup" class="camera-wrap"></div>
-            
-            <!-- Result Display with Security Toggle -->
-            <div id="lookup-result" class="glass-card result-view hidden">
-                <!-- Populated by app.js showLookupResult() -->
-            </div>
+            <div id="lookup-result" class="glass-card result-view hidden"></div>
         </div>
     </section>
 
-    <!-- 5. GENERATOR MODULE (Create New Products) -->
-    <section id="generator-module" class="screen hidden">
+    <!-- GENERATOR -->
+    <section id="generator-module" class="screen">
         <div class="container">
             <button onclick="window.showModule('dashboard')" class="btn-back">← Dashboard</button>
-            <h2 class="section-title">Create Product</h2>
             <form id="product-form" class="glass-card">
-                <div class="input-group">
-                    <label>Product Name</label>
-                    <input type="text" id="p-name" placeholder="Item Name" required>
-                </div>
+                <input type="text" id="p-name" placeholder="Product Name" required>
                 <div class="form-row">
-                    <div class="input-group">
-                        <label>Buy Price (₹)</label>
-                        <input type="number" id="p-buy" placeholder="0.00" step="0.01" required>
-                    </div>
-                    <div class="input-group">
-                        <label>Sell Price (₹)</label>
-                        <input type="number" id="p-sell" placeholder="0.00" step="0.01" required>
-                    </div>
+                    <input type="number" id="p-buy" placeholder="Buy Price" step="0.01" required>
+                    <input type="number" id="p-sell" placeholder="Sell Price" step="0.01" required>
                 </div>
-                <div class="input-group">
-                    <label>Stock Quantity</label>
-                    <input type="number" id="p-stock" placeholder="e.g. 50" required>
-                </div>
+                <input type="number" id="p-stock" placeholder="Stock Quantity" required>
                 <button type="submit" class="btn-primary">Generate QR Code</button>
             </form>
-
-            <div id="qr-result-container" class="glass-card hidden" style="text-align:center; margin-top:20px;">
-                <h3>Product QR Code</h3>
-                <div id="qrcode" style="display:inline-block; padding:15px; background:white; margin:15px 0; border-radius:10px;"></div>
-                <button id="download-qr" class="btn-secondary">Save QR to Gallery</button>
+            <div id="qr-result-container" class="glass-card hidden" style="text-align:center">
+                <div id="qrcode" style="display:inline-block; padding:10px; background:white; margin:10px 0;"></div><br>
+                <button id="download-qr" class="btn-secondary">Download PNG</button>
             </div>
         </div>
     </section>
 
-    <!-- 6. BILLING MODULE (Cart + Customer Data) -->
-    <section id="billing-module" class="screen hidden">
+    <!-- BILLING -->
+    <section id="billing-module" class="screen">
         <div class="container">
             <button onclick="window.showModule('dashboard')" class="btn-back">← Dashboard</button>
-            <h2 class="section-title">New Invoice</h2>
-            
-            <button class="btn-primary" onclick="window.startBillingScan()">📷 Scan Product QR</button>
+            <button class="btn-primary" onclick="window.startBillingScan()">📷 Scan Items to Cart</button>
             <div id="reader-billing" class="camera-wrap"></div>
             
-            <div class="glass-card bill-box" style="margin-top: 20px;">
-                <table id="cart-table">
-                    <thead>
-                        <tr>
-                            <th style="text-align:left">Item</th>
-                            <th>Qty</th>
-                            <th style="text-align:right">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <!-- Items populated by app.js -->
-                    </tbody>
+            <div class="glass-card" style="margin-top:20px">
+                <table id="cart-table" style="width:100%">
+                    <thead><tr style="text-align:left"><th>Item</th><th>Qty</th><th>Price</th></tr></thead>
+                    <tbody></tbody>
                 </table>
-                
                 <div class="total-row">Total: <span id="bill-total">₹0.00</span></div>
                 
-                <div class="cust-info" style="border-top: 1px solid #eee; padding-top: 15px;">
-                    <label style="font-size: 0.8rem; font-weight: 700;">Customer Details</label>
+                <div class="cust-info">
                     <input type="text" id="cust-name" placeholder="Customer Name">
                     <input type="tel" id="cust-phone" placeholder="Phone Number">
                 </div>
-                
-                <button id="checkout-btn" class="btn-success">Complete & Print Bill</button>
+                <button id="checkout-btn" class="btn-success">Complete & Print Invoice</button>
             </div>
         </div>
     </section>
 
-    <!-- Hidden Printable Invoice Area -->
     <div id="invoice-print-area" class="print-only"></div>
 
-    <!-- Main Logic -->
+    <!-- MAIN LOGIC -->
     <script type="module" src="js/app.js"></script>
+
+    <!-- WHITE SCREEN FAILSAFE -->
+    <script>
+        setTimeout(() => {
+            const loader = document.getElementById('initial-loader');
+            if (loader && loader.style.display !== 'none') {
+                loader.style.display = 'none';
+                document.getElementById('login-screen').classList.add('active');
+                document.getElementById('login-screen').style.display = 'block';
+            }
+        }, 4000);
+    </script>
 </body>
 </html>
