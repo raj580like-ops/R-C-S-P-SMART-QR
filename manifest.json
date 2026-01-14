@@ -1,0 +1,15 @@
+{
+  "short_name": "RCSP Smart QR",
+  "name": "R-C-S-P Smart QR Management System",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/241/241528.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": ".",
+  "display": "standalone",
+  "theme_color": "#2563eb",
+  "background_color": "#ffffff"
+}
