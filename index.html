@@ -16,7 +16,7 @@
     <div id="initial-loader"><b>Loading R-C-S-P...</b></div>
     <div id="offline-indicator" class="hidden">⚠️ Offline Mode Active</div>
 
-    <!-- Login -->
+    <!-- 1. Login Screen -->
     <div id="login-screen" class="screen active">
         <div class="auth-container">
             <div class="auth-card">
@@ -31,35 +31,38 @@
         </div>
     </div>
 
-    <!-- Header -->
+    <!-- App Header -->
     <header id="main-header" class="hidden">
         <div class="logo">R-C-S-P <span>Smart QR</span></div>
         <button id="logout-btn" class="btn-outline">Logout</button>
     </header>
 
-    <!-- Dashboard -->
+    <!-- 2. Dashboard -->
     <main id="dashboard" class="screen hidden">
         <div class="grid-menu">
             <div class="menu-card" onclick="showModule('generator-module')">
                 <div class="icon">➕</div>
                 <h3>QR Generator</h3>
+                <p>Add Products</p>
             </div>
             <div class="menu-card" onclick="showModule('scanner-module')">
                 <div class="icon">🔍</div>
-                <h3>Scanner</h3>
+                <h3>QR Scanner</h3>
+                <p>Check Stock/Price</p>
             </div>
             <div class="menu-card" onclick="showModule('billing-module')">
                 <div class="icon">🧾</div>
-                <h3>Billing</h3>
+                <h3>Billing System</h3>
+                <p>Create Invoice</p>
             </div>
         </div>
     </main>
 
-    <!-- QR Generator -->
+    <!-- 3. Module: QR Generator -->
     <section id="generator-module" class="screen hidden">
         <div class="card">
             <button class="btn-outline" onclick="showModule('dashboard')">← Back</button>
-            <h2>New Product</h2>
+            <h2 style="margin-top:15px">New Product</h2>
             <form id="product-form">
                 <input type="text" id="p-name" placeholder="Product Name" required>
                 <div style="display:flex; gap:10px">
@@ -68,36 +71,58 @@
                 </div>
                 <input type="number" id="p-stock" placeholder="Stock Qty" required>
                 <input type="text" id="p-cat" placeholder="Category">
-                <div id="calc-preview" style="background:#eee; padding:10px; margin-bottom:10px; border-radius:5px">Profit: ₹0.00</div>
+                <div id="calc-preview" style="background:#f0f7ff; color:#0056b3; padding:10px; margin-bottom:10px; border-radius:5px; font-weight:600">Profit: ₹0.00</div>
                 <button type="submit" class="btn-primary">Save & Generate QR</button>
             </form>
-            <div id="qr-result-container" class="hidden" style="text-align:center; margin-top:20px">
-                <div id="qrcode" style="display:inline-block; padding:10px; background:white"></div><br>
-                <button id="download-qr" class="btn-outline">Download QR</button>
+            <div id="qr-result-container" class="hidden" style="text-align:center; margin-top:20px; border-top:1px solid #eee; padding-top:20px">
+                <h3>QR Generated!</h3>
+                <div id="qrcode" style="display:inline-block; padding:15px; background:white; margin:10px 0"></div><br>
+                <button id="download-qr" class="btn-outline">Download QR PNG</button>
             </div>
         </div>
     </section>
 
-    <!-- Scanner & Billing -->
-    <section id="billing-module" class="screen hidden">
+    <!-- 4. Module: QR Scanner (Lookup) -->
+    <section id="scanner-module" class="screen hidden">
         <div class="card">
             <button class="btn-outline" onclick="showModule('dashboard')">← Back</button>
-            <h2>Billing System</h2>
-            <button class="btn-primary" onclick="startBillingScan()" style="margin:10px 0">📷 Scan Product QR</button>
-            <div id="reader" style="width:100%; display:none"></div>
-            
-            <table id="cart-table" style="width:100%; border-collapse:collapse; margin-top:20px">
-                <thead><tr style="border-bottom:2px solid #ddd"><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
-                <tbody></tbody>
-            </table>
-            <h3 style="text-align:right; margin:20px 0">Total: <span id="bill-total">₹0.00</span></h3>
-            
-            <input type="text" id="cust-name" placeholder="Customer Name">
-            <input type="tel" id="cust-phone" placeholder="Phone Number">
-            <button id="checkout-btn" class="btn-primary">Generate & Print Bill</button>
+            <h2 style="margin-top:15px">Product Lookup</h2>
+            <p>Scan a QR code to see details</p>
+            <button class="btn-primary" onclick="startLookupScan()" style="margin:15px 0">📷 Start Camera</button>
+            <div id="reader-lookup" style="width:100%"></div>
+            <div id="lookup-result" class="hidden" style="margin-top:20px; padding:15px; background:#f8fafc; border-radius:10px; border:1px solid #e2e8f0">
+                <!-- Data from JS -->
+            </div>
         </div>
     </section>
 
+    <!-- 5. Module: Billing System -->
+    <section id="billing-module" class="screen hidden">
+        <div class="card">
+            <button class="btn-outline" onclick="showModule('dashboard')">← Back</button>
+            <h2 style="margin-top:15px">New Invoice</h2>
+            <button class="btn-primary" onclick="startBillingScan()" style="margin:15px 0">🛒 Scan to Add to Cart</button>
+            <div id="reader-billing" style="width:100%"></div>
+            
+            <div class="table-responsive" style="overflow-x:auto; margin-top:15px">
+                <table id="cart-table" style="width:100%; border-collapse:collapse">
+                    <thead style="background:#f1f5f9">
+                        <tr><th style="padding:10px; text-align:left">Item</th><th>Qty</th><th>Price</th><th>Total</th></tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+            <h3 style="text-align:right; margin:20px 0; color:var(--primary)">Grand Total: <span id="bill-total">₹0.00</span></h3>
+            
+            <div style="border-top:1px solid #eee; padding-top:15px">
+                <input type="text" id="cust-name" placeholder="Customer Name">
+                <input type="tel" id="cust-phone" placeholder="Phone Number">
+                <button id="checkout-btn" class="btn-primary" style="background:var(--success)">Print Final Bill</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Invoice Print Hidden Template -->
     <div id="invoice-print-area" class="print-only"></div>
 
     <script type="module" src="js/app.js"></script>
