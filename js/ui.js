@@ -1,50 +1,90 @@
-import { auth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from './firebase-config.js';
+import { auth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from './firebase-config.js';
 
-// Screen management
+// --- GLOBAL NAVIGATION FUNCTION ---
+// Attached to window so onclick="" in HTML works
 window.showModule = function(moduleId) {
-    document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-    document.getElementById(moduleId).classList.remove('hidden');
+    console.log("Navigating to:", moduleId);
     
-    // Stop scanner if leaving scanner module
-    if (moduleId !== 'scanner-module' && window.html5QrCode) {
-        window.html5QrCode.stop().catch(() => {});
+    // 1. Find all screens
+    const screens = document.querySelectorAll('.screen');
+    
+    // 2. Remove 'active' from all and hide them
+    screens.forEach(s => {
+        s.classList.remove('active');
+    });
+
+    // 3. Show the requested screen
+    const target = document.getElementById(moduleId);
+    if (target) {
+        target.classList.add('active');
+        window.scrollTo(0, 0);
+    } else {
+        console.error("Target screen not found:", moduleId);
     }
 };
 
-// Login Logic
+// --- AUTHENTICATION STATE TRACKER ---
+console.log("Auth System Initializing...");
+
+onAuthStateChanged(auth, (user) => {
+    const header = document.getElementById('main-header');
+    
+    if (user) {
+        console.log("Status: Admin logged in", user.email);
+        // Show app content
+        header.classList.remove('hidden');
+        showModule('dashboard');
+    } else {
+        console.log("Status: No user session");
+        // Show login screen
+        header.classList.add('hidden');
+        showModule('login-screen');
+    }
+});
+
+// --- LOGIN FORM HANDLER ---
 const loginForm = document.getElementById('login-form');
 if (loginForm) {
-    loginForm.addEventListener('submit', (e) => {
+    loginForm.addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('login-email').value;
         const pw = document.getElementById('login-pw').value;
         
-        signInWithEmailAndPassword(auth, email, pw)
-            .catch(err => alert("Login Failed: " + err.message));
+        console.log("Attempting Login...");
+        try {
+            await signInWithEmailAndPassword(auth, email, pw);
+            console.log("Login successful!");
+        } catch (error) {
+            console.error("Login failed:", error.code);
+            alert("Error: " + error.message);
+        }
     });
 }
 
-// Logout Logic
-document.getElementById('logout-btn').onclick = () => signOut(auth);
+// --- LOGOUT HANDLER ---
+const logoutBtn = document.getElementById('logout-btn');
+if (logoutBtn) {
+    logoutBtn.onclick = async () => {
+        try {
+            await signOut(auth);
+            console.log("Logged out");
+            location.reload(); 
+        } catch (error) {
+            console.error("Logout error", error);
+        }
+    };
+}
 
-// Auth State Observer
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        document.getElementById('login-screen').classList.add('hidden');
-        document.getElementById('main-header').classList.remove('hidden');
-        showModule('dashboard');
-    } else {
-        document.getElementById('login-screen').classList.remove('hidden');
-        document.getElementById('main-header').classList.add('hidden');
-        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
-    }
+// --- CONNECTIVITY MONITOR ---
+window.addEventListener('online', () => {
+    document.getElementById('offline-indicator').classList.add('hidden');
+});
+window.addEventListener('offline', () => {
+    document.getElementById('offline-indicator').classList.remove('hidden');
 });
 
-// Connectivity UI
-window.addEventListener('online', () => document.getElementById('offline-indicator').classList.add('hidden'));
-window.addEventListener('offline', () => document.getElementById('offline-indicator').classList.remove('hidden'));
-
-// Import logic for other modules
-import './qr-logic.js';
-import './scanner.js';
-import './billing.js';
+// --- LOAD SUB-MODULES ---
+// We use dynamic imports to ensure ui.js loads even if other files have minor errors
+import('./qr-logic.js').catch(err => console.error("QR Logic failed to load", err));
+import('./scanner.js').catch(err => console.error("Scanner failed to load", err));
+import('./billing.js').catch(err => console.error("Billing failed to load", err));
