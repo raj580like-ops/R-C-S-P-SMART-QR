@@ -2,204 +2,104 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>R-C-S-P Smart QR</title>
-    
-    <!-- CSS Link - Ensure this file exists in the root folder -->
     <link rel="stylesheet" href="styles.css">
-    
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
-    
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    
-    <!-- QR Libraries (Required for Scanner & Generator) -->
+    <link rel="icon" href="data:,">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <script src="https://unpkg.com/html5-qrcode"></script>
+    <style>#initial-loader { position: fixed; inset: 0; background: white; display: flex; align-items: center; justify-content: center; z-index: 10000; }</style>
 </head>
 <body>
 
-    <!-- Connectivity Alert (Hidden by Default) -->
-    <div id="offline-indicator" class="hidden">
-        ⚠️ You are currently offline. Using local data.
-    </div>
+    <div id="initial-loader"><b>Loading R-C-S-P...</b></div>
+    <div id="offline-indicator" class="hidden">⚠️ Offline Mode Active</div>
 
-    <!-- 1. LOGIN SCREEN (Initial View) -->
+    <!-- Login -->
     <div id="login-screen" class="screen active">
         <div class="auth-container">
             <div class="auth-card">
                 <h1>R-C-S-P</h1>
                 <p>Smart QR Management</p>
                 <form id="login-form">
-                    <div class="form-group">
-                        <input type="email" id="login-email" placeholder="Admin Email" required>
-                    </div>
-                    <div class="form-group">
-                        <input type="password" id="login-pw" placeholder="Password" required>
-                    </div>
+                    <input type="email" id="login-email" placeholder="Email" required>
+                    <input type="password" id="login-pw" placeholder="Password" required>
                     <button type="submit" class="btn-primary">Login to Dashboard</button>
                 </form>
             </div>
         </div>
     </div>
 
-    <!-- 2. APP HEADER (Hidden until login) -->
+    <!-- Header -->
     <header id="main-header" class="hidden">
-        <div class="header-content">
-            <div class="logo">R-C-S-P <span>Smart QR</span></div>
-            <button id="logout-btn" class="btn-outline">Logout</button>
-        </div>
+        <div class="logo">R-C-S-P <span>Smart QR</span></div>
+        <button id="logout-btn" class="btn-outline">Logout</button>
     </header>
 
-    <!-- 3. MAIN DASHBOARD -->
+    <!-- Dashboard -->
     <main id="dashboard" class="screen hidden">
-        <div class="container">
-            <div class="welcome-section">
-                <h2>Control Panel</h2>
-                <p>Manage your inventory and billing</p>
+        <div class="grid-menu">
+            <div class="menu-card" onclick="showModule('generator-module')">
+                <div class="icon">➕</div>
+                <h3>QR Generator</h3>
             </div>
-            
-            <div class="grid-menu">
-                <div class="menu-card" onclick="showModule('generator-module')">
-                    <div class="icon">📦</div>
-                    <h3>QR Generator</h3>
-                    <p>Add new products & print QRs</p>
-                </div>
-                <div class="menu-card" onclick="showModule('scanner-module')">
-                    <div class="icon">🔍</div>
-                    <h3>QR Scanner</h3>
-                    <p>Quick lookup & edit stocks</p>
-                </div>
-                <div class="menu-card" onclick="showModule('billing-module')">
-                    <div class="icon">💳</div>
-                    <h3>Billing System</h3>
-                    <p>Create & print invoices</p>
-                </div>
+            <div class="menu-card" onclick="showModule('scanner-module')">
+                <div class="icon">🔍</div>
+                <h3>Scanner</h3>
+            </div>
+            <div class="menu-card" onclick="showModule('billing-module')">
+                <div class="icon">🧾</div>
+                <h3>Billing</h3>
             </div>
         </div>
     </main>
 
-    <!-- 4. MODULE: QR GENERATOR -->
+    <!-- QR Generator -->
     <section id="generator-module" class="screen hidden">
-        <div class="container">
-            <div class="module-header">
-                <button class="btn-back" onclick="showModule('dashboard')">← Back</button>
-                <h2>New Product</h2>
-            </div>
-            
-            <div class="card">
-                <form id="product-form">
-                    <div class="form-group">
-                        <label>Product Name</label>
-                        <input type="text" id="p-name" placeholder="Enter product name" required>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Buying Price (₹)</label>
-                            <input type="number" id="p-buy" step="0.01" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Selling Price (₹)</label>
-                            <input type="number" id="p-sell" step="0.01" required>
-                        </div>
-                    </div>
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Stock Quantity</label>
-                            <input type="number" id="p-stock" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Category</label>
-                            <input type="text" id="p-cat" placeholder="e.g. Mobile">
-                        </div>
-                    </div>
-                    <div id="calc-preview" class="calc-banner">
-                        Profit: ₹0.00 | Margin: 0%
-                    </div>
-                    <button type="submit" class="btn-primary">Save & Generate QR</button>
-                </form>
-            </div>
-
-            <div id="qr-result-container" class="card hidden text-center">
-                <h3>QR Code Generated</h3>
-                <div id="qrcode"></div>
-                <button id="download-qr" class="btn-secondary">Download QR as PNG</button>
+        <div class="card">
+            <button class="btn-outline" onclick="showModule('dashboard')">← Back</button>
+            <h2>New Product</h2>
+            <form id="product-form">
+                <input type="text" id="p-name" placeholder="Product Name" required>
+                <div style="display:flex; gap:10px">
+                    <input type="number" id="p-buy" placeholder="Buy Price" required>
+                    <input type="number" id="p-sell" placeholder="Sell Price" required>
+                </div>
+                <input type="number" id="p-stock" placeholder="Stock Qty" required>
+                <input type="text" id="p-cat" placeholder="Category">
+                <div id="calc-preview" style="background:#eee; padding:10px; margin-bottom:10px; border-radius:5px">Profit: ₹0.00</div>
+                <button type="submit" class="btn-primary">Save & Generate QR</button>
+            </form>
+            <div id="qr-result-container" class="hidden" style="text-align:center; margin-top:20px">
+                <div id="qrcode" style="display:inline-block; padding:10px; background:white"></div><br>
+                <button id="download-qr" class="btn-outline">Download QR</button>
             </div>
         </div>
     </section>
 
-    <!-- 5. MODULE: SCANNER -->
-    <section id="scanner-module" class="screen hidden">
-        <div class="container">
-            <div class="module-header">
-                <button class="btn-back" onclick="showModule('dashboard')">← Back</button>
-                <h2>Scanner</h2>
-            </div>
-            <div id="reader-container">
-                <div id="reader"></div>
-            </div>
-            <div id="scan-result" class="card hidden">
-                <!-- Data populated via JS -->
-            </div>
-        </div>
-    </section>
-
-    <!-- 6. MODULE: BILLING -->
+    <!-- Scanner & Billing -->
     <section id="billing-module" class="screen hidden">
-        <div class="container">
-            <div class="module-header">
-                <button class="btn-back" onclick="showModule('dashboard')">← Back</button>
-                <h2>Create Bill</h2>
-            </div>
+        <div class="card">
+            <button class="btn-outline" onclick="showModule('dashboard')">← Back</button>
+            <h2>Billing System</h2>
+            <button class="btn-primary" onclick="startBillingScan()" style="margin:10px 0">📷 Scan Product QR</button>
+            <div id="reader" style="width:100%; display:none"></div>
             
-            <div class="billing-layout">
-                <div class="bill-left">
-                    <div class="card">
-                        <div class="flex-between">
-                            <h3>Cart Items</h3>
-                            <button class="btn-small" onclick="startBillingScan()">+ Scan Item</button>
-                        </div>
-                        <div class="table-responsive">
-                            <table id="cart-table">
-                                <thead>
-                                    <tr>
-                                        <th>Item</th>
-                                        <th>Qty</th>
-                                        <th>Price</th>
-                                        <th>Total</th>
-                                    </tr>
-                                </thead>
-                                <tbody></tbody>
-                            </table>
-                        </div>
-                        <div class="total-section">
-                            <span>Grand Total:</span>
-                            <span id="bill-total">₹0.00</span>
-                        </div>
-                    </div>
-                </div>
-                
-                <div class="bill-right">
-                    <div class="card">
-                        <h3>Customer Info</h3>
-                        <div class="form-group">
-                            <input type="text" id="cust-name" placeholder="Customer Name">
-                        </div>
-                        <div class="form-group">
-                            <input type="tel" id="cust-phone" placeholder="Phone Number">
-                        </div>
-                        <button id="checkout-btn" class="btn-primary">Generate Invoice</button>
-                    </div>
-                </div>
-            </div>
+            <table id="cart-table" style="width:100%; border-collapse:collapse; margin-top:20px">
+                <thead><tr style="border-bottom:2px solid #ddd"><th>Item</th><th>Qty</th><th>Price</th><th>Total</th></tr></thead>
+                <tbody></tbody>
+            </table>
+            <h3 style="text-align:right; margin:20px 0">Total: <span id="bill-total">₹0.00</span></h3>
+            
+            <input type="text" id="cust-name" placeholder="Customer Name">
+            <input type="tel" id="cust-phone" placeholder="Phone Number">
+            <button id="checkout-btn" class="btn-primary">Generate & Print Bill</button>
         </div>
     </section>
 
-    <!-- Hidden Printable Invoice Area -->
     <div id="invoice-print-area" class="print-only"></div>
 
-    <!-- Main Logic Script -->
-    <script type="module" src="js/ui.js"></script>
+    <script type="module" src="js/app.js"></script>
 </body>
 </html>
