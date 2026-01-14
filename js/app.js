@@ -3,7 +3,7 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
-// 1. FIREBASE CONFIGURATION (REPLACE THIS!)
+// 1. FIREBASE CONFIG (ADD YOUR KEYS HERE)
 // ==========================================
 const firebaseConfig = {
   apiKey: "AIzaSyCABFo3Whsb3kFbfCiLU4jH4TPJjc-_3Yk",
@@ -21,21 +21,28 @@ const db = initializeFirestore(app, {
 });
 
 // ==========================================
-// 2. GLOBAL NAVIGATION & UI
+// 2. CORE NAVIGATION
 // ==========================================
-window.showModule = function(moduleId) {
-    console.log("Navigating to:", moduleId);
+let activeScanner = null;
+
+window.showModule = async function(moduleId) {
+    // If a camera is running, stop it before switching
+    if (activeScanner) {
+        try { await activeScanner.stop(); } catch(e) {}
+        activeScanner = null;
+    }
+
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const target = document.getElementById(moduleId);
-    if (target) target.classList.add('active');
-    window.scrollTo(0, 0);
+    if (target) {
+        target.classList.add('active');
+        window.scrollTo(0, 0);
+    }
 };
 
-// Auth State Observer
+// Login/Logout persistence
 onAuthStateChanged(auth, (user) => {
-    const loader = document.getElementById('initial-loader');
-    if (loader) loader.style.display = 'none';
-
+    document.getElementById('initial-loader').style.display = 'none';
     if (user) {
         document.getElementById('main-header').classList.remove('hidden');
         showModule('dashboard');
@@ -45,67 +52,55 @@ onAuthStateChanged(auth, (user) => {
     }
 });
 
-// Login Form
 document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const email = document.getElementById('login-email').value;
-    const pw = document.getElementById('login-pw').value;
     try {
-        await signInWithEmailAndPassword(auth, email, pw);
-    } catch (err) { alert("Login Error: " + err.message); }
+        await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pw').value);
+    } catch (err) { alert("Error: " + err.message); }
 });
 
-// Logout
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 
 // ==========================================
-// 3. MODULE 1: QR GENERATOR
+// 3. QR GENERATOR LOGIC
 // ==========================================
 const productForm = document.getElementById('product-form');
 if (productForm) {
+    // Auto-calc profit
+    const buyIn = document.getElementById('p-buy');
+    const sellIn = document.getElementById('p-sell');
+    [buyIn, sellIn].forEach(input => input.addEventListener('input', () => {
+        const p = (parseFloat(sellIn.value) || 0) - (parseFloat(buyIn.value) || 0);
+        document.getElementById('calc-preview').innerText = `Profit: ₹${p.toFixed(2)}`;
+    }));
+
     productForm.addEventListener('submit', async (e) => {
-        e.preventDefault(); // STOPS REDIRECT
-        e.stopPropagation();
+        e.preventDefault();
+        const btn = productForm.querySelector('button');
+        btn.innerText = "Saving..."; btn.disabled = true;
 
-        const submitBtn = productForm.querySelector('button[type="submit"]');
-        submitBtn.innerText = "Saving...";
-        submitBtn.disabled = true;
-
-        const pData = {
+        const data = {
             name: document.getElementById('p-name').value,
-            buy: parseFloat(document.getElementById('p-buy').value),
-            sell: parseFloat(document.getElementById('p-sell').value),
+            buy: parseFloat(buyIn.value),
+            sell: parseFloat(sellIn.value),
             stock: parseInt(document.getElementById('p-stock').value),
             category: document.getElementById('p-cat').value || "General",
             createdAt: serverTimestamp()
         };
 
         try {
-            const docRef = await addDoc(collection(db, "products"), pData);
-            
-            // Show QR Result
-            const qrContainer = document.getElementById('qrcode');
-            qrContainer.innerHTML = ""; 
-            new QRCode(qrContainer, {
-                text: docRef.id,
-                width: 180,
-                height: 180
-            });
-
+            const docRef = await addDoc(collection(db, "products"), data);
+            const qrBox = document.getElementById('qrcode');
+            qrBox.innerHTML = "";
+            new QRCode(qrBox, { text: docRef.id, width: 160, height: 160 });
             document.getElementById('qr-result-container').classList.remove('hidden');
-            alert("✅ Product Saved and QR Generated!");
+            alert("Success!");
             productForm.reset();
-            document.getElementById('calc-preview').innerText = "Profit: ₹0.00 | Margin: 0%";
-        } catch (err) {
-            alert("Firestore Error: " + err.message);
-        } finally {
-            submitBtn.innerText = "Save & Generate QR";
-            submitBtn.disabled = false;
-        }
+        } catch (err) { alert(err.message); }
+        btn.innerText = "Save & Generate QR"; btn.disabled = false;
     });
 }
 
-// Download QR logic
 document.getElementById('download-qr').onclick = () => {
     const canvas = document.querySelector('#qrcode canvas');
     if (canvas) {
@@ -117,95 +112,86 @@ document.getElementById('download-qr').onclick = () => {
 };
 
 // ==========================================
-// 4. MODULE 2 & 3: SCANNER & BILLING
+// 4. MODULE: SCANNER (LOOKUP)
 // ==========================================
-let cart = [];
-let html5QrCode;
-
-window.startBillingScan = async () => {
-    if (!html5QrCode) html5QrCode = new Html5Qrcode("reader");
+window.startLookupScan = async () => {
+    activeScanner = new Html5Qrcode("reader-lookup");
+    document.getElementById('lookup-result').classList.add('hidden');
     
-    document.getElementById('reader').style.display = 'block';
-    
-    html5QrCode.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: 250 },
-        async (decodedText) => {
-            console.log("Scanned ID:", decodedText);
-            await html5QrCode.stop();
-            document.getElementById('reader').style.display = 'none';
-            addToCart(decodedText);
+    activeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
+        async (id) => {
+            await activeScanner.stop();
+            const snap = await getDoc(doc(db, "products", id));
+            if (snap.exists()) {
+                const p = snap.data();
+                const res = document.getElementById('lookup-result');
+                res.innerHTML = `
+                    <h3>${p.name}</h3>
+                    <p><b>Selling Price:</b> ₹${p.sell}</p>
+                    <p><b>Stock:</b> ${p.stock} units</p>
+                    <p><b>Category:</b> ${p.category}</p>
+                `;
+                res.classList.remove('hidden');
+            } else { alert("Product not found."); }
         }
-    ).catch(err => alert("Camera Error: " + err));
+    ).catch(e => alert("Camera Error: " + e));
 };
 
-async function addToCart(id) {
-    try {
-        const docRef = doc(db, "products", id);
-        const snap = await getDoc(docRef);
-        
-        if (snap.exists()) {
-            const prod = snap.data();
-            const existing = cart.find(item => item.id === id);
-            if (existing) {
-                existing.qty++;
-            } else {
-                cart.push({ id, name: prod.name, price: prod.sell, qty: 1 });
+// ==========================================
+// 5. MODULE: BILLING SYSTEM
+// ==========================================
+let cart = [];
+
+window.startBillingScan = async () => {
+    activeScanner = new Html5Qrcode("reader-billing");
+    activeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
+        async (id) => {
+            // We don't stop the scanner here so user can scan multiple items
+            const snap = await getDoc(doc(db, "products", id));
+            if (snap.exists()) {
+                const p = snap.data();
+                const existing = cart.find(i => i.id === id);
+                if (existing) existing.qty++;
+                else cart.push({ id, name: p.name, price: p.sell, qty: 1 });
+                renderCart();
             }
-            renderCart();
-        } else {
-            alert("Product not found in database.");
         }
-    } catch (err) {
-        alert("Error fetching product: " + err.message);
-    }
-}
+    ).catch(e => alert("Camera Error: " + e));
+};
 
 function renderCart() {
     const tbody = document.querySelector('#cart-table tbody');
     tbody.innerHTML = "";
     let total = 0;
-    cart.forEach((item, index) => {
-        const rowTotal = item.price * item.qty;
-        total += rowTotal;
-        tbody.innerHTML += `
-            <tr>
-                <td>${item.name}</td>
-                <td>${item.qty}</td>
-                <td>₹${item.price}</td>
-                <td>₹${rowTotal.toFixed(2)}</td>
-            </tr>
-        `;
+    cart.forEach(item => {
+        total += (item.price * item.qty);
+        tbody.innerHTML += `<tr><td style="padding:8px">${item.name}</td><td>${item.qty}</td><td>₹${item.price}</td><td>₹${(item.price * item.qty).toFixed(2)}</td></tr>`;
     });
     document.getElementById('bill-total').innerText = `₹${total.toFixed(2)}`;
 }
 
-// Checkout and Print
 document.getElementById('checkout-btn').onclick = () => {
     if (cart.length === 0) return alert("Cart is empty");
-    
-    const name = document.getElementById('cust-name').value || "Walking Customer";
+    const name = document.getElementById('cust-name').value || "Guest";
     const phone = document.getElementById('cust-phone').value || "N/A";
-    const total = document.getElementById('bill-total').innerText;
     
-    const printArea = document.getElementById('invoice-print-area');
-    printArea.innerHTML = `
-        <div style="text-align:center; font-family: sans-serif;">
+    document.getElementById('invoice-print-area').innerHTML = `
+        <div style="text-align:center; font-family:sans-serif; padding:20px">
             <h2>RAJ CUSTOMER SERVICE POINT</h2>
-            <p>Dhalpal, Tufanganj, Coochbehar<br>+91 8972766578</p>
+            <p>Dhalpal, Tufanganj, Coochbehar | +91 8972766578</p>
             <hr>
-            <p>Customer: ${name} | Mob: ${phone}</p>
-            <p>Date: ${new Date().toLocaleString()}</p>
-            <table style="width:100%; text-align:left; border-collapse:collapse;">
-                <tr style="border-bottom:1px solid #000"><th>Item</th><th>Qty</th><th>Price</th></tr>
+            <div style="text-align:left">
+                <p><b>Customer:</b> ${name} | <b>Mob:</b> ${phone}</p>
+                <p><b>Date:</b> ${new Date().toLocaleString()}</p>
+            </div>
+            <table style="width:100%; border-collapse:collapse; margin:15px 0">
+                <tr style="border-bottom:1px solid #000"><th>Item</th><th>Qty</th><th>Total</th></tr>
                 ${cart.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>₹${i.price * i.qty}</td></tr>`).join('')}
             </table>
-            <hr>
-            <h3 style="text-align:right">Grand Total: ${total}</h3>
-            <p style="margin-top:20px">Thank you for visiting!</p>
+            <h3 style="text-align:right">Total: ${document.getElementById('bill-total').innerText}</h3>
+            <p style="margin-top:30px">--- Thank You ---</p>
         </div>
     `;
     window.print();
-    cart = [];
-    renderCart();
+    cart = []; renderCart();
 };
