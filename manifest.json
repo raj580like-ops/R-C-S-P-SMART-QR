@@ -1,15 +1,23 @@
 {
-  "short_name": "RCSP Smart QR",
-  "name": "R-C-S-P Smart QR Management System",
+  "name": "R-C-S-P Smart QR POS",
+  "short_name": "RCSP-POS",
+  "description": "Smart QR Inventory and Billing System",
+  "start_url": "/index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#6366f1",
+  "orientation": "portrait",
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/241/241528.png",
+      "src": "icon-192.png",
+      "sizes": "192x192",
       "type": "image/png",
-      "sizes": "512x512"
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
     }
-  ],
-  "start_url": ".",
-  "display": "standalone",
-  "theme_color": "#2563eb",
-  "background_color": "#ffffff"
+  ]
 }
