@@ -3,15 +3,15 @@ import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, addDoc, doc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
 // ==========================================
-// 1. FIREBASE CONFIG (ADD YOUR KEYS HERE)
+// 1. FIREBASE CONFIG (REPLACE WITH YOUR KEYS)
 // ==========================================
 const firebaseConfig = {
-  apiKey: "AIzaSyCABFo3Whsb3kFbfCiLU4jH4TPJjc-_3Yk",
-  authDomain: "r-c-s-p-qr.firebaseapp.com",
-  projectId: "r-c-s-p-qr",
-  storageBucket: "r-c-s-p-qr.firebasestorage.app",
-  messagingSenderId: "851473499622",
-  appId: "1:851473499622:web:be694ec06ba10d21148227"
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_ID",
+    appId: "YOUR_APP_ID"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -21,12 +21,16 @@ const db = initializeFirestore(app, {
 });
 
 // ==========================================
-// 2. CORE NAVIGATION
+// 2. GLOBAL UI CONTROLS
 // ==========================================
 let activeScanner = null;
+let cart = [];
 
+// Attach to window so HTML onclick works
 window.showModule = async function(moduleId) {
-    // If a camera is running, stop it before switching
+    console.log("Navigating to:", moduleId);
+    
+    // Stop any running scanner
     if (activeScanner) {
         try { await activeScanner.stop(); } catch(e) {}
         activeScanner = null;
@@ -40,25 +44,29 @@ window.showModule = async function(moduleId) {
     }
 };
 
-// Login/Logout persistence
+// Auth State
 onAuthStateChanged(auth, (user) => {
-    document.getElementById('initial-loader').style.display = 'none';
+    const loader = document.getElementById('initial-loader');
+    if (loader) loader.style.display = 'none';
+
     if (user) {
         document.getElementById('main-header').classList.remove('hidden');
-        showModule('dashboard');
+        window.showModule('dashboard');
     } else {
         document.getElementById('main-header').classList.add('hidden');
-        showModule('login-screen');
+        window.showModule('login-screen');
     }
 });
 
+// Login
 document.getElementById('login-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     try {
         await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-pw').value);
-    } catch (err) { alert("Error: " + err.message); }
+    } catch (err) { alert("Login Error: " + err.message); }
 });
 
+// Logout
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 
 // ==========================================
@@ -66,11 +74,13 @@ document.getElementById('logout-btn').onclick = () => signOut(auth);
 // ==========================================
 const productForm = document.getElementById('product-form');
 if (productForm) {
-    // Auto-calc profit
     const buyIn = document.getElementById('p-buy');
     const sellIn = document.getElementById('p-sell');
+    
     [buyIn, sellIn].forEach(input => input.addEventListener('input', () => {
-        const p = (parseFloat(sellIn.value) || 0) - (parseFloat(buyIn.value) || 0);
+        const b = parseFloat(buyIn.value) || 0;
+        const s = parseFloat(sellIn.value) || 0;
+        const p = s - b;
         document.getElementById('calc-preview').innerText = `Profit: ₹${p.toFixed(2)}`;
     }));
 
@@ -94,9 +104,9 @@ if (productForm) {
             qrBox.innerHTML = "";
             new QRCode(qrBox, { text: docRef.id, width: 160, height: 160 });
             document.getElementById('qr-result-container').classList.remove('hidden');
-            alert("Success!");
+            alert("✅ Product Saved!");
             productForm.reset();
-        } catch (err) { alert(err.message); }
+        } catch (err) { alert("Error: " + err.message); }
         btn.innerText = "Save & Generate QR"; btn.disabled = false;
     });
 }
@@ -112,49 +122,72 @@ document.getElementById('download-qr').onclick = () => {
 };
 
 // ==========================================
-// 4. MODULE: SCANNER (LOOKUP)
+// 4. SCANNER: LOOKUP MODULE (FIXED)
 // ==========================================
-window.startLookupScan = async () => {
+window.startLookupScan = async function() {
+    console.log("Starting Lookup Scanner...");
+    if (activeScanner) { await activeScanner.stop(); }
+    
     activeScanner = new Html5Qrcode("reader-lookup");
     document.getElementById('lookup-result').classList.add('hidden');
     
-    activeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
+    activeScanner.start(
+        { facingMode: "environment" }, 
+        { fps: 10, qrbox: 250 }, 
         async (id) => {
+            console.log("Scanned ID:", id);
             await activeScanner.stop();
-            const snap = await getDoc(doc(db, "products", id));
-            if (snap.exists()) {
-                const p = snap.data();
-                const res = document.getElementById('lookup-result');
-                res.innerHTML = `
-                    <h3>${p.name}</h3>
-                    <p><b>Selling Price:</b> ₹${p.sell}</p>
-                    <p><b>Stock:</b> ${p.stock} units</p>
-                    <p><b>Category:</b> ${p.category}</p>
-                `;
-                res.classList.remove('hidden');
-            } else { alert("Product not found."); }
+            activeScanner = null;
+            
+            try {
+                const snap = await getDoc(doc(db, "products", id));
+                if (snap.exists()) {
+                    const p = snap.data();
+                    const res = document.getElementById('lookup-result');
+                    res.innerHTML = `
+                        <h3 style="color:var(--primary)">${p.name}</h3>
+                        <p><b>Price:</b> ₹${p.sell}</p>
+                        <p><b>Stock:</b> ${p.stock} pcs</p>
+                        <p><b>Category:</b> ${p.category}</p>
+                    `;
+                    res.classList.remove('hidden');
+                } else {
+                    alert("Product not found in database.");
+                }
+            } catch (e) { alert("Error fetching product details."); }
         }
-    ).catch(e => alert("Camera Error: " + e));
+    ).catch(e => {
+        console.error(e);
+        alert("Camera Permission Denied or Error.");
+    });
 };
 
 // ==========================================
-// 5. MODULE: BILLING SYSTEM
+// 5. SCANNER: BILLING MODULE (FIXED)
 // ==========================================
-let cart = [];
-
-window.startBillingScan = async () => {
+window.startBillingScan = async function() {
+    console.log("Starting Billing Scanner...");
+    if (activeScanner) { await activeScanner.stop(); }
+    
     activeScanner = new Html5Qrcode("reader-billing");
-    activeScanner.start({ facingMode: "environment" }, { fps: 10, qrbox: 250 }, 
+    activeScanner.start(
+        { facingMode: "environment" }, 
+        { fps: 10, qrbox: 250 }, 
         async (id) => {
-            // We don't stop the scanner here so user can scan multiple items
-            const snap = await getDoc(doc(db, "products", id));
-            if (snap.exists()) {
-                const p = snap.data();
-                const existing = cart.find(i => i.id === id);
-                if (existing) existing.qty++;
-                else cart.push({ id, name: p.name, price: p.sell, qty: 1 });
-                renderCart();
-            }
+            try {
+                const snap = await getDoc(doc(db, "products", id));
+                if (snap.exists()) {
+                    const p = snap.data();
+                    const existing = cart.find(i => i.id === id);
+                    if (existing) {
+                        existing.qty++;
+                    } else {
+                        cart.push({ id, name: p.name, price: p.sell, qty: 1 });
+                    }
+                    renderCart();
+                    // Optional: play a small beep sound here
+                }
+            } catch (e) { console.error("Billing scan error", e); }
         }
     ).catch(e => alert("Camera Error: " + e));
 };
@@ -163,9 +196,16 @@ function renderCart() {
     const tbody = document.querySelector('#cart-table tbody');
     tbody.innerHTML = "";
     let total = 0;
-    cart.forEach(item => {
+    cart.forEach((item, index) => {
         total += (item.price * item.qty);
-        tbody.innerHTML += `<tr><td style="padding:8px">${item.name}</td><td>${item.qty}</td><td>₹${item.price}</td><td>₹${(item.price * item.qty).toFixed(2)}</td></tr>`;
+        tbody.innerHTML += `
+            <tr>
+                <td style="padding:10px; border-bottom:1px solid #eee">${item.name}</td>
+                <td style="border-bottom:1px solid #eee">${item.qty}</td>
+                <td style="border-bottom:1px solid #eee">₹${item.price}</td>
+                <td style="border-bottom:1px solid #eee; font-weight:bold">₹${(item.price * item.qty).toFixed(2)}</td>
+            </tr>
+        `;
     });
     document.getElementById('bill-total').innerText = `₹${total.toFixed(2)}`;
 }
@@ -175,23 +215,26 @@ document.getElementById('checkout-btn').onclick = () => {
     const name = document.getElementById('cust-name').value || "Guest";
     const phone = document.getElementById('cust-phone').value || "N/A";
     
-    document.getElementById('invoice-print-area').innerHTML = `
-        <div style="text-align:center; font-family:sans-serif; padding:20px">
-            <h2>RAJ CUSTOMER SERVICE POINT</h2>
-            <p>Dhalpal, Tufanganj, Coochbehar | +91 8972766578</p>
+    const printArea = document.getElementById('invoice-print-area');
+    printArea.innerHTML = `
+        <div style="text-align:center; font-family:sans-serif; padding:20px; border:1px solid #000">
+            <h2 style="margin:0">RAJ CUSTOMER SERVICE POINT</h2>
+            <p style="margin:5px">Dhalpal, Tufanganj, Coochbehar<br>+91 8972766578</p>
             <hr>
-            <div style="text-align:left">
+            <div style="text-align:left; font-size:14px">
                 <p><b>Customer:</b> ${name} | <b>Mob:</b> ${phone}</p>
                 <p><b>Date:</b> ${new Date().toLocaleString()}</p>
             </div>
-            <table style="width:100%; border-collapse:collapse; margin:15px 0">
+            <table style="width:100%; border-collapse:collapse; margin:15px 0; text-align:left">
                 <tr style="border-bottom:1px solid #000"><th>Item</th><th>Qty</th><th>Total</th></tr>
-                ${cart.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>₹${i.price * i.qty}</td></tr>`).join('')}
+                ${cart.map(i => `<tr><td>${i.name}</td><td>${i.qty}</td><td>₹${(i.price * i.qty).toFixed(2)}</td></tr>`).join('')}
             </table>
+            <hr>
             <h3 style="text-align:right">Total: ${document.getElementById('bill-total').innerText}</h3>
-            <p style="margin-top:30px">--- Thank You ---</p>
+            <p style="margin-top:20px; font-size:12px">Thank you for your business!</p>
         </div>
     `;
     window.print();
-    cart = []; renderCart();
+    cart = [];
+    renderCart();
 };
