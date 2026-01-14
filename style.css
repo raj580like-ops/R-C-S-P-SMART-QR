@@ -1,0 +1,66 @@
+:root {
+    --primary: #2563eb;
+    --success: #10b981;
+    --bg: #f8fafc;
+    --text: #1e293b;
+    --card: #ffffff;
+}
+
+* { box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+body {
+    margin: 0; background-color: var(--bg); color: var(--text);
+    padding-bottom: 50px;
+}
+
+.screen { padding: 20px; max-width: 800px; margin: 0 auto; transition: 0.3s opacity; }
+.hidden { display: none !important; }
+
+/* Dashboard Cards */
+.grid-menu {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;
+}
+.card {
+    background: var(--card); padding: 20px; border-radius: 12px;
+    box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); cursor: pointer;
+}
+.card:active { transform: scale(0.98); }
+
+/* Header */
+header {
+    background: white; padding: 15px 20px; display: flex; 
+    justify-content: space-between; align-items: center;
+    border-bottom: 1px solid #e2e8f0;
+}
+.logo { font-weight: 700; color: var(--primary); }
+.logo span { color: var(--text); font-weight: 400; }
+
+/* Forms */
+.form-group { margin-bottom: 15px; }
+label { display: block; margin-bottom: 5px; font-size: 0.9rem; font-weight: 500; }
+input {
+    width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px;
+}
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+/* Buttons */
+.btn-primary {
+    width: 100%; background: var(--primary); color: white; border: none;
+    padding: 14px; border-radius: 8px; font-weight: 600; cursor: pointer;
+}
+.btn-secondary { background: #e2e8f0; border: none; padding: 10px; border-radius: 6px; }
+
+/* Offline Indicator */
+#offline-indicator {
+    background: #ef4444; color: white; text-align: center; padding: 5px; font-size: 0.8rem;
+}
+
+/* Scanner */
+#reader { width: 100%; border-radius: 12px; overflow: hidden; }
+
+/* Print Media Queries */
+@media print {
+    body * { visibility: hidden; }
+    #invoice-print-area, #invoice-print-area * { visibility: visible; }
+    #invoice-print-area { position: absolute; left: 0; top: 0; width: 100%; }
+}
