@@ -6,12 +6,12 @@ import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager
 // 1. FIREBASE CONFIG (REPLACE WITH YOUR KEYS)
 // ==========================================
 const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_ID",
-    appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyCABFo3Whsb3kFbfCiLU4jH4TPJjc-_3Yk",
+  authDomain: "r-c-s-p-qr.firebaseapp.com",
+  projectId: "r-c-s-p-qr",
+  storageBucket: "r-c-s-p-qr.firebasestorage.app",
+  messagingSenderId: "851473499622",
+  appId: "1:851473499622:web:be694ec06ba10d21148227"
 };
 
 const app = initializeApp(firebaseConfig);
